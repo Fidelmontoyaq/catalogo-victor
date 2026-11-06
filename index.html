@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gaudy Ventas | Catálogo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background:#f5ede4; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .brand-line { border-bottom: 4px solid #dc2626; display:inline-block; }
+    .card { transition: transform .2s, box-shadow .2s; }
+    .card:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(0,0,0,.12); }
+    .price-tag { background:#111; border-bottom:3px solid #dc2626; }
+    .stock-tag { font-size:.75rem; font-weight:600; padding:.15rem .6rem; border-radius:9999px; }
+    .stock-ok  { background:#dcfce7; color:#166534; }
+    .stock-low { background:#fef3c7; color:#92400e; }
+    .stock-out { background:#fee2e2; color:#991b1b; }
+    .size-btn.active { background:#111; color:#fff; border-color:#111; }
+    .ph { background: linear-gradient(135deg,#f9d5bd,#e9b99a); }
+    #drawer { transition: transform .3s; }
+  </style>
+</head>
+<body class="text-gray-900">
+
+  <!-- Encabezado -->
+  <header class="sticky top-0 z-30 bg-[#f5ede4]/95 backdrop-blur border-b border-black/10">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+      <h1 class="text-2xl sm:text-3xl font-black tracking-tight"><span class="brand-line">GAUDY VENTAS</span></h1>
+      <button id="openCart" class="relative bg-black text-white rounded-xl px-4 py-2 font-semibold text-sm">
+        🛒 Carrito
+        <span id="cartCount" class="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">0</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    <!-- Oferta gorras -->
+    <div class="bg-black text-white rounded-2xl p-4 mb-6 flex flex-wrap items-center justify-between gap-2">
+      <p class="font-bold">🧢 Gorras Premium: <span class="text-yellow-300">1 x S/35</span> · <span class="text-red-400">OFERTA 2 x S/65</span></p>
+      <p class="text-sm opacity-80">Pedidos por WhatsApp: 993 436 889</p>
+    </div>
+
+    <!-- Filtros -->
+    <section class="flex flex-col md:flex-row gap-3 mb-4">
+      <input id="search" type="search" placeholder="Buscar producto o marca..."
+             class="flex-1 rounded-xl border border-black/10 px-4 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-red-500">
+      <select id="sort" class="rounded-xl border border-black/10 px-4 py-2 bg-white">
+        <option value="default">Ordenar: destacados</option>
+        <option value="asc">Precio: menor a mayor</option>
+        <option value="desc">Precio: mayor a menor</option>
+        <option value="stock">Mayor stock</option>
+      </select>
+      <label class="flex items-center gap-2 text-sm px-2">
+        <input id="onlyStock" type="checkbox" class="accent-red-600"> Solo con stock
+      </label>
+    </section>
+    <div id="cats" class="flex flex-wrap gap-2 mb-6"></div>
+
+    <!-- Grilla -->
+    <section id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></section>
+    <p id="empty" class="hidden text-center text-gray-500 py-16">No se encontraron productos.</p>
+  </main>
+
+  <footer class="border-t border-black/10 mt-10 py-6 text-center text-sm text-gray-500">
+    Pedidos por WhatsApp: 993 436 889 · Gaudy Ventas
+  </footer>
+
+  <!-- Carrito -->
+  <div id="overlay" class="fixed inset-0 bg-black/40 z-40 hidden"></div>
+  <aside id="drawer" class="fixed top-0 right-0 h-full w-full sm:w-96 bg-white z-50 translate-x-full flex flex-col shadow-2xl">
+    <div class="p-4 border-b flex items-center justify-between">
+      <h2 class="font-bold text-lg">Tu pedido</h2>
+      <button id="closeCart" class="text-2xl leading-none">&times;</button>
+    </div>
+    <div id="cartItems" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+    <div class="p-4 border-t space-y-3">
+      <div class="flex justify-between font-bold text-lg"><span>Total</span><span id="cartTotal">S/0</span></div>
+      <button id="checkout" class="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-3 font-semibold">Pedir por WhatsApp</button>
+      <button id="clearCart" class="w-full text-sm text-gray-500 underline">Vaciar carrito</button>
+    </div>
+  </aside>
+
+  <script>
+    const WHATSAPP = "51993436889";
+
+    // ====== DATOS (edita aquí el stock, precios y las rutas de imagen) ======
+    // img: coloca tus fotos en una carpeta "img/" con estos nombres, o cambia la ruta.
+    const products = [
+      // Sudaderas
+      {id:1,  name:"Sudadera Guess blanca", cat:"Sudaderas", brand:"Guess", price:50, sizes:["M"], stock:3,  img:"img/sudadera-guess-blanca.jpg"},
+      {id:2,  name:"Sudadera Guess beige",  cat:"Sudaderas", brand:"Guess", price:50, sizes:["M"], stock:4,  img:"img/sudadera-guess-beige.jpg"},
+      {id:3,  name:"Sudadera Guess negra",  cat:"Sudaderas", brand:"Guess", price:50, sizes:["M"], stock:2,  img:"img/sudadera-guess-negra.jpg"},
+      // Polos
+      {id:4,  name:"Polo Guess blanco (mujer)", cat:"Polos", brand:"Guess", price:40, sizes:["S","M"], stock:6, img:"img/polo-guess-blanco.jpg"},
+      {id:5,  name:"Polo Guess negro – triángulo azul", cat:"Polos", brand:"Guess", price:40, sizes:[], stock:5, img:"img/polo-guess-negro-triangulo.jpg"},
+      {id:6,  name:"Polo Guess negro – logo multicolor", cat:"Polos", brand:"Guess", price:40, sizes:[], stock:5, img:"img/polo-guess-negro-multicolor.jpg"},
+      {id:7,  name:"Polo Tommy Hilfiger azul",  cat:"Polos", brand:"Tommy Hilfiger", price:60, sizes:["S","M"], stock:5, img:"img/polo-tommy-azul.jpg"},
+      {id:8,  name:"Polo Tommy Hilfiger negro", cat:"Polos", brand:"Tommy Hilfiger", price:60, sizes:["L"], stock:2, img:"img/polo-tommy-negro.jpg"},
+      {id:9,  name:"Polo Psycho Bunny azul",    cat:"Polos", brand:"Psycho Bunny", price:60, sizes:["S"], stock:1, img:"img/polo-psycho-bunny.jpg"},
+      {id:10, name:"Polo Tommy Hilfiger estampado", cat:"Polos", brand:"Tommy Hilfiger", price:55, sizes:[], stock:4, img:"img/polo-tommy-estampado.jpg"},
+      {id:11, name:"Polo Tommy Hilfiger tricolor",  cat:"Polos", brand:"Tommy Hilfiger", price:55, sizes:[], stock:4, img:"img/polo-tommy-tricolor.jpg"},
+      // Accesorios
+      {id:12, name:"Neceser Calvin Klein cuadros", cat:"Accesorios", brand:"Calvin Klein", price:55, sizes:[], stock:5, img:"img/neceser-ck-cuadros.jpg"},
+      {id:13, name:"Neceser Calvin Klein negro",   cat:"Accesorios", brand:"Calvin Klein", price:55, sizes:[], stock:5, img:"img/neceser-ck-negro.jpg"},
+      {id:14, name:"Morral Lacoste blanco y negro", cat:"Accesorios", brand:"Lacoste", price:55, sizes:[], stock:4, img:"img/morral-lacoste-bn.jpg"},
+      {id:15, name:"Morral Lacoste negro",          cat:"Accesorios", brand:"Lacoste", price:55, sizes:[], stock:4, img:"img/morral-lacoste-negro.jpg"},
+      {id:16, name:"Morral Hugo Boss negro",        cat:"Accesorios", brand:"Hugo Boss", price:55, sizes:[], stock:3, img:"img/morral-hugo-boss.jpg"},
+      {id:17, name:"Neceser Hugo negro",            cat:"Accesorios", brand:"Hugo", price:55, sizes:[], stock:3, img:"img/neceser-hugo.jpg"},
+      {id:18, name:"Morral BOSS negro",             cat:"Accesorios", brand:"BOSS", price:60, sizes:[], stock:3, img:"img/morral-boss.jpg"},
+      // Shorts
+      {id:19, name:"Short Lacoste blanco",        cat:"Shorts", brand:"Lacoste", price:40, sizes:["S"], stock:2, img:"img/short-lacoste.jpg"},
+      {id:20, name:"Short Emporio Armani celeste", cat:"Shorts", brand:"Emporio Armani", price:40, sizes:["S"], stock:2, img:"img/short-armani.jpg"},
+      {id:21, name:"Short BOSS azul marino",      cat:"Shorts", brand:"BOSS", price:40, sizes:["M"], stock:3, img:"img/short-boss-azul.jpg"},
+      {id:22, name:"Short BOSS gris",             cat:"Shorts", brand:"BOSS", price:40, sizes:["L"], stock:3, img:"img/short-boss-gris.jpg"},
+      // Sandalias
+      {id:23, name:"Sandalias Calvin Klein negras",     cat:"Sandalias", brand:"Calvin Klein", price:60, sizes:["39","40","41","42","43","44"], stock:12, img:"img/sandalia-ck-negra.jpg"},
+      {id:24, name:"Sandalias Calvin Klein azul",       cat:"Sandalias", brand:"Calvin Klein", price:60, sizes:["39","40","41","42","43","44"], stock:12, img:"img/sandalia-ck-azul.jpg"},
+      {id:25, name:"Sandalias Calvin Klein azul marino",cat:"Sandalias", brand:"Calvin Klein", price:60, sizes:["39","40","41","42","43","44"], stock:12, img:"img/sandalia-ck-marino.jpg"},
+      {id:26, name:"Sandalias Lacoste azul",            cat:"Sandalias", brand:"Lacoste", price:60, sizes:["40","41","44"], stock:6, img:"img/sandalia-lacoste.jpg"},
+      {id:27, name:"Sandalias HUGO beige",              cat:"Sandalias", brand:"Hugo", price:60, sizes:["39","40","41","42","43"], stock:8, img:"img/sandalia-hugo-beige.jpg"},
+      {id:28, name:"Sandalias HUGO beige/verde",        cat:"Sandalias", brand:"Hugo", price:60, sizes:["39"], stock:1, img:"img/sandalia-hugo-verde.jpg"},
+      // Gorras (1x S/35 · 2x S/65)
+      {id:29, name:"Gorra Calvin Klein blanca", cat:"Gorras", brand:"Calvin Klein", price:35, sizes:[], stock:6, img:"img/gorra-ck.jpg", promo:true},
+      {id:30, name:"Gorra Guess negra (triángulo)", cat:"Gorras", brand:"Guess", price:35, sizes:[], stock:6, img:"img/gorra-guess-1.jpg", promo:true},
+      {id:31, name:"Gorra Guess negra (logo)",  cat:"Gorras", brand:"Guess", price:35, sizes:[], stock:6, img:"img/gorra-guess-2.jpg", promo:true},
+      {id:32, name:"Gorra Columbia naranja",    cat:"Gorras", brand:"Columbia", price:35, sizes:[], stock:6, img:"img/gorra-columbia.jpg", promo:true},
+      {id:33, name:"Gorra Nike negra",          cat:"Gorras", brand:"Nike", price:35, sizes:[], stock:6, img:"img/gorra-nike.jpg", promo:true},
+    ];
+
+    const emoji = {Sudaderas:"🧥", Polos:"👕", Accesorios:"👜", Shorts:"🩳", Sandalias:"🩴", Gorras:"🧢"};
+    const S = "S/";
+    let cart = JSON.parse(localStorage.getItem("gaudy_cart") || "[]");
+    let state = {cat:"Todos", q:"", sort:"default", onlyStock:false, sizes:{}};
+
+    // El stock disponible descuenta lo que ya está en el carrito
+    const inCart = id => cart.filter(i => i.id === id).reduce((a,i)=>a+i.qty,0);
+    const available = p => p.stock - inCart(p.id);
+
+    function stockTag(p){
+      const a = available(p);
+      if (a <= 0) return `<span class="stock-tag stock-out">Stock: 0 · Agotado</span>`;
+      if (a <= 2) return `<span class="stock-tag stock-low">Stock: ${a} · ¡Últimas!</span>`;
+      return `<span class="stock-tag stock-ok">Stock: ${a}</span>`;
+    }
+
+    function renderCats(){
+      const cats = ["Todos", ...new Set(products.map(p=>p.cat))];
+      document.getElementById("cats").innerHTML = cats.map(c =>
+        `<button data-cat="${c}" class="px-4 py-1.5 rounded-full text-sm font-semibold border ${state.cat===c?'bg-black text-white border-black':'bg-white border-black/10'}">${c}</button>`
+      ).join("");
+    }
+
+    function renderGrid(){
+      let list = products.filter(p =>
+        (state.cat==="Todos" || p.cat===state.cat) &&
+        (`${p.name} ${p.brand}`.toLowerCase().includes(state.q)) &&
+        (!state.onlyStock || available(p) > 0)
+      );
+      if (state.sort==="asc") list.sort((a,b)=>a.price-b.price);
+      if (state.sort==="desc") list.sort((a,b)=>b.price-a.price);
+      if (state.sort==="stock") list.sort((a,b)=>available(b)-available(a));
+
+      document.getElementById("empty").classList.toggle("hidden", list.length>0);
+      document.getElementById("grid").innerHTML = list.map(p => {
+        const a = available(p);
+        const sel = state.sizes[p.id] || (p.sizes[0] || "");
+        return `
+        <article class="card bg-white rounded-2xl overflow-hidden flex flex-col" data-id="${p.id}" data-stock="${a}">
+          <div class="ph aspect-[4/5] relative flex items-center justify-center">
+            <img src="${p.img}" alt="${p.name}" loading="lazy" class="absolute inset-0 w-full h-full object-contain"
+                 onerror="this.remove()">
+            <div class="text-center select-none">
+              <div class="text-6xl">${emoji[p.cat]}</div>
+              <div class="mt-2 font-bold text-black/60">${p.brand}</div>
+            </div>
+            ${p.promo ? '<span class="absolute top-3 left-3 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">2 x S/65</span>' : ''}
+            ${a<=0 ? '<span class="absolute inset-0 bg-white/60 flex items-center justify-center font-black text-red-700 text-xl">AGOTADO</span>' : ''}
+          </div>
+          <div class="p-4 flex flex-col gap-2 flex-1">
+            <h3 class="font-bold leading-snug">${p.name}</h3>
+            <div class="flex items-center justify-between">
+              ${stockTag(p)}
+              <span class="price-tag text-white font-extrabold px-3 py-1 rounded-lg">${S}${p.price}</span>
+            </div>
+            ${p.sizes.length ? `
+              <div class="flex flex-wrap gap-1.5">
+                ${p.sizes.map(s=>`<button data-size="${s}" data-pid="${p.id}" class="size-btn text-xs px-2.5 py-1 rounded-md border border-black/20 ${s===sel?'active':''}">${s}</button>`).join("")}
+              </div>` : `<p class="text-xs text-gray-500">${p.cat==="Accesorios"?"Accesorio":"Talla única / consultar"}</p>`}
+            <button data-add="${p.id}" ${a<=0?'disabled':''}
+              class="mt-auto bg-black text-white rounded-xl py-2 font-semibold hover:bg-red-600 transition disabled:opacity-40 disabled:hover:bg-black disabled:cursor-not-allowed">
+              ${a<=0?'Sin stock':'Agregar al carrito'}
+            </button>
+          </div>
+        </article>`;
+      }).join("");
+    }
+
+    // Precio con oferta de gorras: cada 2 gorras = S/65
+    function totals(){
+      let total = 0, caps = 0;
+      cart.forEach(i => { const p = products.find(x=>x.id===i.id); if (p.promo) caps += i.qty; else total += p.price*i.qty; });
+      total += Math.floor(caps/2)*65 + (caps%2)*35;
+      return total;
+    }
+
+    function renderCart(){
+      localStorage.setItem("gaudy_cart", JSON.stringify(cart));
+      const count = cart.reduce((a,i)=>a+i.qty,0);
+      document.getElementById("cartCount").textContent = count;
+      document.getElementById("cartTotal").textContent = S + totals();
+      document.getElementById("cartItems").innerHTML = cart.length ? cart.map((i,idx)=>{
+        const p = products.find(x=>x.id===i.id);
+        return `<div class="flex items-center gap-3 border rounded-xl p-3">
+          <div class="flex-1 text-sm">
+            <p class="font-semibold">${p.name}</p>
+            <p class="text-gray-500">${i.size ? 'Talla: '+i.size+' · ' : ''}${S}${p.price}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button data-dec="${idx}" class="w-7 h-7 rounded-full border">−</button>
+            <span>${i.qty}</span>
+            <button data-inc="${idx}" class="w-7 h-7 rounded-full border">+</button>
+          </div>
+        </div>`;
+      }).join("") : '<p class="text-center text-gray-500 py-10">Tu carrito está vacío.</p>';
+      renderGrid();
+    }
+
+    function addToCart(id){
+      const p = products.find(x=>x.id===id);
+      if (available(p) <= 0) return;
+      const size = state.sizes[id] || (p.sizes[0] || "");
+      const found = cart.find(i=>i.id===id && i.size===size);
+      found ? found.qty++ : cart.push({id, size, qty:1});
+      renderCart();
+      openDrawer();
+    }
+
+    const drawer = document.getElementById("drawer"), overlay = document.getElementById("overlay");
+    function openDrawer(){ drawer.classList.remove("translate-x-full"); overlay.classList.remove("hidden"); }
+    function closeDrawer(){ drawer.classList.add("translate-x-full"); overlay.classList.add("hidden"); }
+
+    // Eventos
+    document.getElementById("openCart").onclick = openDrawer;
+    document.getElementById("closeCart").onclick = closeDrawer;
+    overlay.onclick = closeDrawer;
+    document.getElementById("search").oninput = e => { state.q = e.target.value.toLowerCase(); renderGrid(); };
+    document.getElementById("sort").onchange = e => { state.sort = e.target.value; renderGrid(); };
+    document.getElementById("onlyStock").onchange = e => { state.onlyStock = e.target.checked; renderGrid(); };
+    document.getElementById("cats").onclick = e => { const c = e.target.dataset.cat; if(c){ state.cat=c; renderCats(); renderGrid(); } };
+    document.getElementById("grid").onclick = e => {
+      const add = e.target.dataset.add, size = e.target.dataset.size;
+      if (add) addToCart(+add);
+      if (size){ state.sizes[e.target.dataset.pid] = size; renderGrid(); }
+    };
+    document.getElementById("cartItems").onclick = e => {
+      const inc = e.target.dataset.inc, dec = e.target.dataset.dec;
+      if (inc !== undefined){ const p = products.find(x=>x.id===cart[inc].id); if (available(p)>0) cart[inc].qty++; }
+      if (dec !== undefined){ cart[dec].qty--; if (cart[dec].qty<=0) cart.splice(dec,1); }
+      renderCart();
+    };
+    document.getElementById("clearCart").onclick = () => { cart = []; renderCart(); };
+    document.getElementById("checkout").onclick = () => {
+      if (!cart.length) return;
+      const lines = cart.map(i=>{ const p = products.find(x=>x.id===i.id); return `• ${p.name}${i.size?' (Talla '+i.size+')':''} x${i.qty}`; });
+      const msg = `Hola Gaudy Ventas, quiero hacer este pedido:\n${lines.join("\n")}\nTotal: ${S}${totals()}`;
+      window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`, "_blank");
+    };
+
+    renderCats();
+    renderCart();
+  </script>
+</body>
+</html>
